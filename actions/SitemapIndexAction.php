@@ -8,14 +8,14 @@ use yii\helpers\Url;
 use xj\sitemap\models\Sitemap;
 use xj\sitemap\formaters\IndexResponseFormatter;
 
-class SitemapIndexAction extends Action {
-
+class SitemapIndexAction extends Action
+{
     /**
      * dataProvider
-     * @var ActiveDataProvider
+     * @var \yii\data\ActiveDataProvider
      */
     public $dataProvider;
-    
+
     /**
      * custom data list
      * @var []
@@ -33,16 +33,18 @@ class SitemapIndexAction extends Action {
      * @var bool
      */
     private $isClosure;
-    
+
     /**
      * Custom Loc Index
-     * @var Closure
+     * @var \Closure
      * // Closure
-     * function($currentPage, $pageParm) {return new Sitemap();}
+     * function($currentPage, $pageParam) {return new Sitemap();}
      */
     public $remap;
 
-    public function init() {
+    public function init()
+    {
+        parent::init();
 
         if (is_callable($this->remap)) {
             $this->isClosure = true;
@@ -50,20 +52,18 @@ class SitemapIndexAction extends Action {
             $this->isClosure = false;
             $this->remap = null;
         }
-
-        return parent::init();
     }
 
     /**
      * execute run()
-     * @return []Url
+     * @return Url[]
      */
-    public function run() {
+    public function run()
+    {
         $response = Yii::$app->response;
-        $response->formatters[IndexResponseFormatter::FORMAT_INDEX] = new IndexResponseFormatter([]);
+        $response->formatters[IndexResponseFormatter::FORMAT_INDEX] = new IndexResponseFormatter();
         $response->format = IndexResponseFormatter::FORMAT_INDEX;
 
-        $indexModels = [];
         if (!empty($this->dataList)) {
             $indexModels = $this->dataList;
         } else {
@@ -74,21 +74,22 @@ class SitemapIndexAction extends Action {
 
     /**
      * getFromDataProvider
-     * @return []Sitemap
+     * @return Sitemap[]
      */
-    private function getFromDataProvider() {
+    private function getFromDataProvider()
+    {
         $dataProvider = $this->dataProvider;
         $dataProvider->prepare();
         $pagination = $dataProvider->getPagination();
         $pageCount = $pagination->pageCount;
-        $pageParm = $pagination->pageParam;
+        $pageParam = $pagination->pageParam;
 
         $indexModels = [];
-        for ($i = 0; $i < $pageCount; ++$i) {
+        for ($i = 0; $i < $pageCount; $i++) {
             if ($this->isClosure) {
-                $indexModels[] = call_user_func($this->remap, $i, $pageParm);
+                $indexModels[] = call_user_func($this->remap, $i + 1, $pageParam);
             } else {
-                $indexModels[] = $this->getModel($i, $this->route, $pageParm);
+                $indexModels[] = $this->getModel($i + 1, $this->route, $pageParam);
             }
         }
 
@@ -99,14 +100,14 @@ class SitemapIndexAction extends Action {
      * get Default Model
      * @param int $currentPage
      * @param array $route
-     * @param int $pageParm
+     * @param int $pageParam
      * @return Sitemap
      */
-    private function getModel($currentPage, $route, $pageParm) {
-        $route[$pageParm] = $currentPage;
+    private function getModel($currentPage, $route, $pageParam)
+    {
+        $route[$pageParam] = $currentPage;
         $loc = Url::toRoute($route, true);
         $lastmod = date(DATE_W3C);
         return Sitemap::create($loc, $lastmod);
     }
-
 }
