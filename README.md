@@ -11,7 +11,7 @@ composer.json
 
 ActiveRecord DATASOURCE
 ---
-```
+```php
 //AR DATASOURCE
 public function actions() {
     return [
@@ -55,7 +55,7 @@ public function actions() {
 ```
 Array DATASOURCE
 ---
-```
+```php
 public function actions() {
     return [
         //FOR DIRECT DATA
