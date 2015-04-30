@@ -4,6 +4,7 @@ namespace xj\sitemap\actions;
 
 use Yii;
 use yii\base\Action;
+use yii\base\ErrorException;
 use xj\sitemap\models\Url;
 use xj\sitemap\formaters\UrlsetResponseFormatter;
 
@@ -11,15 +12,9 @@ class SitemapUrlsetAction extends Action {
 
     /**
      * dataProvider
-     * @var ActiveDataProvider
+     * @var \yii\data\ActiveDataProvider
      */
     public $dataProvider;
-
-    /**
-     * custom data list
-     * @var []
-     */
-    public $dataList = [];
 
     /**
      * remap type
@@ -41,16 +36,16 @@ class SitemapUrlsetAction extends Action {
 
     public function init() {
 
-        if (!empty($this->dataList)) {
-            $this->isClosure = false;
-            $this->remap = null;
-        } elseif (is_array($this->remap)) {
+        if (is_array($this->remap)) {
             $this->isClosure = false;
         } elseif (is_callable($this->remap)) {
             $this->isClosure = true;
         } else {
-            throw new \yii\base\ErrorException('remap is wrong type!.');
+            throw new ErrorException('remap is wrong type!.');
         }
+
+        //init dataProvider
+        $this->dataProvider->prepare();
 
         return parent::init();
     }
@@ -60,30 +55,21 @@ class SitemapUrlsetAction extends Action {
      * @return []Url
      */
     public function run() {
+        //setFormat
+        $this->setFormatters();
 
+        //return Url models
+        return $this->getFromDataProvider();
+    }
+
+    private function setFormatters() {
+        $currentPage = $this->dataProvider->getPagination()->getPage() + 1;
         $response = Yii::$app->response;
         $response->formatters[UrlsetResponseFormatter::FORMAT_URLSET] = new UrlsetResponseFormatter([
             'gzip' => $this->gzip,
-            'gzipFilename' => $this->getGzipFilename(),
+            'gzipFilename' => 'sitemap.' . $currentPage . '.xml.gz',
         ]);
         $response->format = UrlsetResponseFormatter::FORMAT_URLSET;
-
-        $urlModels = [];
-        if (!empty($this->dataList)) {
-            $urlModels = $this->dataList;
-        } else {
-            $urlModels = $this->getFromDataProvider();
-        }
-        return $urlModels;
-    }
-
-    private function getGzipFilename() {
-        if (!empty($this->dataList)) {
-            $name = 'sitemap.xml.gz';
-        } else {
-            $name = 'sitemap.' . $this->dataProvider->getPagination()->getPage() . '.xml.gz';
-        }
-        return $name;
     }
 
     /**

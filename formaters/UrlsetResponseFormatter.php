@@ -86,7 +86,7 @@ class UrlsetResponseFormatter extends Component implements ResponseFormatterInte
         //output
         if ($this->gzip) {
             $response->content = gzencode($xmlData);
-            header("Content-Disposition: attachment; filename=\"{$this->gzipFilename}\"");
+            $response->getHeaders()->set('Content-Disposition', "attachment; filename=\"{$this->gzipFilename}\"");
         } else {
             $response->content = $xmlData;
         }

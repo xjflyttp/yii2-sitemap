@@ -9,56 +9,98 @@ composer.json
 },
 ```
 
-Action:
-===
-sitemap urlset
+ActiveRecord DATASOURCE
 ---
-```php
-'sitemap' => [
-    'class' => 'xj\sitemap\actions\SitemapUrlsetAction',
-    'dataProvider' => new \yii\data\ActiveDataProvider([
-        'query' => \common\models\Tech::find(),
-        'pagination' => [
-            'pageSize' => 5,
-            'pageParam' => 'p',
-        ]]),
-    'remap' => [
-        'loc' => function($model){return 'http://www.163.com/';},
-        'lastmod' => function($model){return date(DATE_W3C);},
-        'changefreq' => function($model){return \xj\sitemap\models\Url::CHANGEFREQ_NEVER;},
-        'priority' => function($model){return 1;},
-    ],
-    'remap' => function($model) {
-        /* @var $model Tech */
-        return \xj\sitemap\models\Url::create($loc, $lastmod, $changeFreq, $priority);
-    },
-],
+```
+//AR DATASOURCE
+public function actions() {
+    return [
+        //FOR AR DATA
+        'sitemap-ar-index' => [
+            'class' => SitemapIndexAction::className(),
+            'route' => ['sitemap-ar'],
+            'dataProvider' => new ActiveDataProvider([
+                'query' => \app\models\User::find(),
+                'pagination' => [
+                    'pageParam' => 'p',
+                    'pageSize' => 1,
+                ]]),
+        ],
+        'sitemap-ar' => [
+            'class' => SitemapUrlsetAction::className(),
+            'gzip' => YII_DEBUG ? false : true,
+            'dataProvider' => new ActiveDataProvider([
+                'query' => \app\models\User::find(),
+                'pagination' => [
+                    'pageParam' => 'p',
+                    'pageSize' => 1,
+                ]]),
+            'remap' => [
+                'loc' => function($model) {
+                    return $model->username;
+                },
+                'lastmod' => function($model) {
+                    return date(DATE_W3C);
+                },
+                'changefreq' => function($model) {
+                    return Url::CHANGEFREQ_NEVER;
+                },
+                'priority' => function($model) {
+                    return '1.0';
+                },
+            ],
+        ],
+    ];
+}
+```
+Array DATASOURCE
+---
+```
+public function actions() {
+    return [
+        //FOR DIRECT DATA
+        'sitemap-direct-index' => [
+            'class' => SitemapIndexAction::className(),
+            'route' => ['sitemap-direct'],
+            'dataProvider' => new ArrayDataProvider([
+                'allModels' => [
+                    Sitemap::create(\yii\helpers\Url::to(['sitemap-direct', 'p' => 1], true), date(DATE_W3C)),
+                    Sitemap::create(\yii\helpers\Url::to(['sitemap-direct', 'p' => 2], true), date(DATE_W3C)),
+                    Sitemap::create(\yii\helpers\Url::to(['sitemap-direct', 'p' => 3], true), date(DATE_W3C)),
+                ],
+                'pagination' => [
+                    'pageParam' => 'p',
+                    'pageSize' => 1,
+                ]
+                    ]),
+        ],
+        'sitemap-direct' => [
+            'class' => SitemapUrlsetAction::className(),
+            'gzip' => YII_DEBUG ? false : true,
+            'dataProvider' => new ArrayDataProvider([
+                'allModels' => [
+                    Sitemap::create('http://url-a', date(DATE_W3C)),
+                    Sitemap::create('http://url-b', date(DATE_W3C)),
+                    Sitemap::create('http://url-c', date(DATE_W3C)),
+                    Sitemap::create('http://url-d', date(DATE_W3C)),
+                    Sitemap::create('http://url-e', date(DATE_W3C)),
+                    Sitemap::create('http://url-f', date(DATE_W3C)),
+                ],
+                'pagination' => [
+                    'pageParam' => 'p',
+                    'pageSize' => 2,
+                ]
+                    ]),
+            'remap' => function($model) {
+                /* @var $model Sitemap */
+                return Url::create($model->loc, $model->lastmod, 1, Url::CHANGEFREQ_NEVER);
+            },
+        ],
+    ];
+}
 ```
 
-sitemap index
----
-```php
-//From dataProvider
-'sitemap-index' => [
-    'class' => 'xj\sitemap\actions\SitemapIndexAction',
-    'dataProvider' => new ActiveDataProvider([
-        'query' => Tech::find(),
-        'pagination' => [
-            'pageSize' => 5,
-            'pageParam' => 'p',
-        ]
-    ]),
-],
-//OR Direct Data
-'sitemap-index' => [
-    'class' => 'xj\sitemap\actions\SitemapIndexAction',
-    'dataList' => [
-        \xj\sitemap\models\Sitemap::create('http://sitemap-url-a.xml.gz', date(DATE_W3C)),
-        \xj\sitemap\models\Sitemap::create('http://sitemap-url-b.xml.gz', date(DATE_W3C)),
-    ]
-],
-```
-UrlManager Rules
+UrlManager
 ---
 ```php
 [
@@ -66,9 +108,15 @@ UrlManager Rules
     'showScriptName' => false,
     'enablePrettyUrl' => true,
     'rules' => [
-        'sitemap.xml' => 'site/sitemap-index',
-        'sitemap.<p:\d+>.xml' => 'site/sitemap',
+        'sitemap.xml' => 'sitemap/sitemap-ar-index',
+        'sitemap.<p:\d+>.xml.gz' => 'sitemap/sitemap-ar',
     ],
 ];
+```
 
+Access
+---
+```
+http://domain/sitemap.xml
+http://domain/sitemap.1.xml.gz
 ```
