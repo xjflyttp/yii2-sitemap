@@ -1,101 +1,151 @@
 yii2-sitemap
 ============
 
+Note
+---
+```
+ver2.0+ Api has change.
+Please read README
+```
+
 composer.json
------
+---
 ```json
 "require": {
-    "xj/yii2-sitemap": "*"
+    "xj/yii2-sitemap": "~2.0"
 },
 ```
 
-ActiveRecord DATASOURCE
+Actions
 ---
 ```php
-//AR DATASOURCE
-public function actions() {
+use app\models\User;
+use yii\data\ActiveDataProvider;
+use yii\data\ArrayDataProvider;
+use xj\sitemap\models\Url;
+use xj\sitemap\models\BaiduUrl;
+use xj\sitemap\actions\SitemapUrlsetAction;
+use xj\sitemap\actions\SitemapIndexAction;
+
+public function actions()
+{
     return [
-        //FOR AR DATA
-        'sitemap-ar-index' => [
+        //Google Sitemap By ActiveRecord
+        'sitemap-google-index' => [
             'class' => SitemapIndexAction::className(),
-            'route' => ['sitemap-ar'],
+            'route' => ['sitemap-google-urlset'],
             'dataProvider' => new ActiveDataProvider([
-                'query' => \app\models\User::find(),
+                'query' => User::find(),
                 'pagination' => [
                     'pageParam' => 'p',
-                    'pageSize' => 1,
+                    'pageSize' => 1, //per page 1 record
                 ]]),
         ],
-        'sitemap-ar' => [
+        'sitemap-google-urlset' => [
             'class' => SitemapUrlsetAction::className(),
             'gzip' => YII_DEBUG ? false : true,
             'dataProvider' => new ActiveDataProvider([
-                'query' => \app\models\User::find(),
+                'query' => User::find(),
                 'pagination' => [
                     'pageParam' => 'p',
                     'pageSize' => 1,
                 ]]),
-            'remap' => [
-                'loc' => function($model) {
-                    return $model->username;
-                },
-                'lastmod' => function($model) {
-                    return date(DATE_W3C);
-                },
-                'changefreq' => function($model) {
-                    return Url::CHANGEFREQ_NEVER;
-                },
-                'priority' => function($model) {
-                    return '1.0';
-                },
-            ],
+            'remap' => function ($model) {
+                /* @var $model User */
+                return Url::create([
+                    'loc' => \yii\helpers\Url::to(['user/view', 'username' => $model->username], true),
+                    'lastmod' => date(DATE_W3C, $model->updated_at),
+                    'changefreq' => Url::CHANGEFREQ_MONTHLY,
+                    'priority' => '0.5',
+                ]);
+            },
         ],
-    ];
-}
-```
-Array DATASOURCE
----
-```php
-public function actions() {
-    return [
+
+        //Baidu Mobile Sitemap By ActiveRecord
+        'sitemap-baidumobile-index' => [
+            'class' => SitemapIndexAction::className(),
+            'route' => ['sitemap-baidumobile-urlset'],
+            'dataProvider' => new ActiveDataProvider([
+                'query' => User::find(),
+                'pagination' => [
+                    'pageParam' => 'p',
+                    'pageSize' => 1, //per page 1 record
+                ]]),
+        ],
+        'sitemap-baidumobile-urlset' => [
+            'class' => SitemapUrlsetAction::className(),
+            'urlClass' => BaiduUrl::className(), //for Baidu
+            'gzip' => YII_DEBUG ? false : true,
+            'dataProvider' => new ActiveDataProvider([
+                'query' => User::find(),
+                'pagination' => [
+                    'pageParam' => 'p',
+                    'pageSize' => 1,
+                ]]),
+            'remap' => function ($model) {
+                /* @var $model User */
+                return BaiduUrl::create([
+                    'loc' => \yii\helpers\Url::to(['user/view', 'username' => $model->username], true),
+                    'lastmod' => date(DATE_W3C, $model->updated_at),
+                    'changefreq' => Url::CHANGEFREQ_MONTHLY,
+                    'priority' => '0.5',
+                    'baiduType' => BaiduUrl::BAIDU_TYPE_MOBILE, // BaiduUrl::BAIDU_TYPE_ADAP | BaiduUrl::BAIDU_TYPE_HTMLADAP
+                ]);
+            },
+        ],
+
         //FOR DIRECT DATA
         'sitemap-direct-index' => [
             'class' => SitemapIndexAction::className(),
             'route' => ['sitemap-direct'],
             'dataProvider' => new ArrayDataProvider([
                 'allModels' => [
-                    Sitemap::create(\yii\helpers\Url::to(['sitemap-direct', 'p' => 1], true), date(DATE_W3C)),
-                    Sitemap::create(\yii\helpers\Url::to(['sitemap-direct', 'p' => 2], true), date(DATE_W3C)),
-                    Sitemap::create(\yii\helpers\Url::to(['sitemap-direct', 'p' => 3], true), date(DATE_W3C)),
+                    1, 1, 1, 1 //only need number// p=1 | p=2 | p=3 | p=4
                 ],
                 'pagination' => [
                     'pageParam' => 'p',
                     'pageSize' => 1,
                 ]
-                    ]),
+            ]),
         ],
-        'sitemap-direct' => [
+        'sitemap-direct-urlset' => [
             'class' => SitemapUrlsetAction::className(),
             'gzip' => YII_DEBUG ? false : true,
             'dataProvider' => new ArrayDataProvider([
                 'allModels' => [
-                    Sitemap::create('http://url-a', date(DATE_W3C)),
-                    Sitemap::create('http://url-b', date(DATE_W3C)),
-                    Sitemap::create('http://url-c', date(DATE_W3C)),
-                    Sitemap::create('http://url-d', date(DATE_W3C)),
-                    Sitemap::create('http://url-e', date(DATE_W3C)),
-                    Sitemap::create('http://url-f', date(DATE_W3C)),
+                    [
+                        'loc' => 'http://url-a',
+                        'lastmod' => date(DATE_W3C),
+                        'changefreq' => Url::CHANGEFREQ_ALWAYS,
+                    ],
+                    [
+                        'loc' => 'http://url-b',
+                        'lastmod' => date(DATE_W3C),
+                        'changefreq' => Url::CHANGEFREQ_DAILY,
+                    ],
+                    [
+                        'loc' => 'http://error-model',
+                        'lastmod' => date(DATE_W3C),
+                        'changefreq' => Url::CHANGEFREQ_HOURLY,
+                        'priority' => 'errorPriority',
+                    ],
+                    [
+                        'loc' => 'http://url-c',
+                        'lastmod' => date(DATE_W3C),
+                        'changefreq' => Url::CHANGEFREQ_HOURLY,
+                    ],
                 ],
                 'pagination' => [
                     'pageParam' => 'p',
-                    'pageSize' => 2,
+                    'pageSize' => 4,
                 ]
-                    ]),
-            'remap' => function($model) {
-                /* @var $model Sitemap */
-                return Url::create($model->loc, $model->lastmod, 1, Url::CHANGEFREQ_NEVER);
+            ]),
+            'remap' => function ($model) {
+                /* @var $model array */
+                return Url::create()->setAttributes($model);
             },
         ],
+
     ];
 }
 ```
@@ -108,8 +158,8 @@ UrlManager
     'showScriptName' => false,
     'enablePrettyUrl' => true,
     'rules' => [
-        'sitemap.xml' => 'sitemap/sitemap-ar-index',
-        'sitemap.<p:\d+>.xml.gz' => 'sitemap/sitemap-ar',
+        'sitemap.xml' => 'sitemap/sitemap-google-index',
+        'sitemap.<p:\d+>.xml.gz' => 'sitemap/sitemap-google-urlset',
     ],
 ];
 ```

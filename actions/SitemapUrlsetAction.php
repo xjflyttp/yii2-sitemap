@@ -7,8 +7,10 @@ use yii\base\Action;
 use yii\base\ErrorException;
 use xj\sitemap\models\Url;
 use xj\sitemap\formaters\UrlsetResponseFormatter;
+use yii\base\InvalidConfigException;
 
-class SitemapUrlsetAction extends Action {
+class SitemapUrlsetAction extends Action
+{
 
     /**
      * dataProvider
@@ -17,33 +19,37 @@ class SitemapUrlsetAction extends Action {
     public $dataProvider;
 
     /**
-     * remap type
-     * @var bool
-     */
-    private $isClosure;
-
-    /**
      * Remap Data to Url
-     * @var Closure | []
+     * @var Closure
      */
     public $remap;
 
     /**
-     * gzip package.
+     * enable gzip
      * @var bool
      */
     public $gzip = false;
 
-    public function init() {
+    /**
+     * if $remap === null
+     * will use $urlClass to create model
+     * @var string
+     */
+    public $urlClass = 'xj\sitemap\models\Url';
 
-        if (is_array($this->remap)) {
-            $this->isClosure = false;
-        } elseif (is_callable($this->remap)) {
-            $this->isClosure = true;
-        } else {
-            throw new ErrorException('remap is wrong type!.');
-        }
+    /**
+     * addition xmlns
+     * @var []
+     * @example
+     * ['xmlns:mobile' => 'http://www.baidu.com/schemas/sitemap-mobile/1/']
+     */
+    public $xmlns;
 
+    /**
+     * init
+     */
+    public function init()
+    {
         //init dataProvider
         $this->dataProvider->prepare();
 
@@ -51,10 +57,11 @@ class SitemapUrlsetAction extends Action {
     }
 
     /**
-     * execute run()
-     * @return []Url
+     * run
+     * @return Url[]
      */
-    public function run() {
+    public function run()
+    {
         //setFormat
         $this->setFormatters();
 
@@ -62,54 +69,46 @@ class SitemapUrlsetAction extends Action {
         return $this->getFromDataProvider();
     }
 
-    private function setFormatters() {
+    /**
+     * set Action Response Formatter
+     */
+    protected function setFormatters()
+    {
         $currentPage = $this->dataProvider->getPagination()->getPage() + 1;
         $response = Yii::$app->response;
-        $response->formatters[UrlsetResponseFormatter::FORMAT_URLSET] = new UrlsetResponseFormatter([
+        $formatter = new UrlsetResponseFormatter([
             'gzip' => $this->gzip,
             'gzipFilename' => 'sitemap.' . $currentPage . '.xml.gz',
         ]);
+        $xmlns = $this->xmlns;
+        if (null === $xmlns) {
+            $xmlns = call_user_func([$this->urlClass, 'getXmlns']);
+        }
+        $formatter->addXmlns($xmlns);
+        $response->formatters[UrlsetResponseFormatter::FORMAT_URLSET] = $formatter;
         $response->format = UrlsetResponseFormatter::FORMAT_URLSET;
     }
 
     /**
-     * getFromDataProvider
-     * @return []Url
+     *
+     * @return Url[]
      */
-    private function getFromDataProvider() {
-        $remap = $this->remap;
+    protected function getFromDataProvider()
+    {
+        $urlClassName = $this->urlClass;
         $models = $this->dataProvider->getModels();
-        $oModels = [];
+        $outModels = [];
         foreach ($models as $model) {
-            if ($this->isClosure) {
+            if ($this->remap === null) {
+                $urlModel = new $urlClassName();
+                $outModels[] = $urlModel->setAttribute();
+            } else {
                 //function($model)
                 //return Url
-                $oModels[] = call_user_func($remap, $model);
-            } else {
-                $oModels[] = $this->remapModel($model, $this->remap);
+                $outModels[] = call_user_func($this->remap, $model);
             }
         }
-        return $oModels;
-    }
-
-    /**
-     * SourceModel Remap to SitemapModel
-     * @param Model $model SourceModel
-     * @param [] $remap Remap Table
-     * @reutrn Url
-     */
-    private function remapModel($model, $remap) {
-        $oModel = new Url();
-        foreach ($remap as $dst => $src) {
-            if (is_callable($src)) {
-                //function($model)
-                //return xj\sitemap\models\Sitemap
-                $oModel->$dst = call_user_func($src, $model);
-            } else {
-                $oModel->$dst = $model->$src;
-            }
-        }
-        return $oModel;
+        return $outModels;
     }
 
 }

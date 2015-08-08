@@ -5,14 +5,17 @@ namespace xj\sitemap\formaters;
 use DOMDocument;
 use DOMElement;
 use DOMText;
+use xj\sitemap\models\Url;
 use yii\base\Arrayable;
 use yii\base\Component;
+use yii\helpers\ArrayHelper;
 use yii\web\ResponseFormatterInterface;
 
 /**
  * UrlsetResponseFormatter
  */
-class UrlsetResponseFormatter extends Component implements ResponseFormatterInterface {
+class UrlsetResponseFormatter extends Component implements ResponseFormatterInterface
+{
 
     const FORMAT_URLSET = 'sitemap-urlset';
 
@@ -51,14 +54,14 @@ class UrlsetResponseFormatter extends Component implements ResponseFormatterInte
      * xmlns
      * @var string
      */
-    public $xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9';
+    public $xmlns;
 
     /**
      * gzip enable.
      * @var bool
      */
     public $gzip = false;
-    
+
     /**
      * gzip filename
      * @var string
@@ -66,10 +69,22 @@ class UrlsetResponseFormatter extends Component implements ResponseFormatterInte
     public $gzipFilename = 'sitemap.xml.gz';
 
     /**
+     * @param string $attribute
+     * @param string $value
+     * @reutn $this
+     */
+    public function addXmlns($options)
+    {
+        $this->xmlns = ArrayHelper::merge($this->xmlns, $options);
+        return $this;
+    }
+
+    /**
      * Formats the specified response.
      * @param Response $response the response to be formatted.
      */
-    public function format($response) {
+    public function format($response)
+    {
         $charset = $this->encoding === null ? $response->charset : $this->encoding;
         if ($this->gzip) {
             $this->contentType = $this->gzipContentType;
@@ -78,10 +93,14 @@ class UrlsetResponseFormatter extends Component implements ResponseFormatterInte
         }
         $response->getHeaders()->set('Content-Type', $this->contentType);
         $dom = new DOMDocument($this->version, $charset);
-        $root = $dom->createElement($this->rootTag);
-        $root->setAttribute('xmlns', $this->xmlns);
-        $dom->appendChild($root);
-        $this->buildXml($root, $response->data);
+        $urlsetElement = $dom->createElement($this->rootTag); //urlset
+        $dom->appendChild($urlsetElement);
+
+        foreach ($this->xmlns as $xmlnsAttributeName => $xmlnsAttributeValue) {
+            $urlsetElement->setAttribute($xmlnsAttributeName, $xmlnsAttributeValue);
+        }
+
+        $this->buildXml($urlsetElement, $response->data);
         $xmlData = $dom->saveXML();
         //output
         if ($this->gzip) {
@@ -94,37 +113,18 @@ class UrlsetResponseFormatter extends Component implements ResponseFormatterInte
 
     /**
      * @param DOMElement $element
-     * @param mixed $data
+     * @param mixed $urls
      */
-    protected function buildXml($element, $data) {
-        if (is_object($data)) {
-            $child = new DOMElement($this->itemTag);
-            $element->appendChild($child);
-            if ($data instanceof Arrayable) {
-                $this->buildXml($child, $data->toArray());
-            } else {
-                $array = [];
-                foreach ($data as $name => $value) {
-                    $array[$name] = $value;
-                }
-                $this->buildXml($child, $array);
+    protected function buildXml(&$urlSetElement, $urls)
+    {
+        /* @var $urls Url[] */
+        foreach ($urls as $url) {
+            if (false === $url->validate()) {
+                continue;//ignore error model
             }
-        } elseif (is_array($data)) {
-            foreach ($data as $name => $value) {
-                if (is_int($name) && is_object($value)) {
-                    $this->buildXml($element, $value);
-                } elseif (is_array($value) || is_object($value)) {
-                    $child = new DOMElement(is_int($name) ? $this->itemTag : $name);
-                    $element->appendChild($child);
-                    $this->buildXml($child, $value);
-                } else {
-                    $child = new DOMElement(is_int($name) ? $this->itemTag : $name);
-                    $element->appendChild($child);
-                    $child->appendChild(new DOMText((string) $value));
-                }
-            }
-        } else {
-            $element->appendChild(new DOMText((string) $data));
+            $urlElement = new DOMElement($this->itemTag);
+            $urlSetElement->appendChild($urlElement);
+            $url->buildUrlXml($urlElement, $this->itemTag);
         }
     }
 

@@ -4,23 +4,21 @@ namespace xj\sitemap\models;
 
 use yii\base\Model;
 
-class Sitemap extends Model {
-
+class Sitemap extends Model
+{
     public $loc;
     public $lastmod;
 
-    public function rules() {
+    public function rules()
+    {
         return [
             ['loc', 'required'],
             ['lastmod', 'string'],
         ];
     }
 
-    public function validDatetime() {
-//        YYYY-MM-DDThh:mmTZD
-    }
-
-    public function attributeLabels() {
+    public function attributeLabels()
+    {
         return [
             'loc' => 'Loc',
             'lastmod' => 'LastMod',
@@ -28,18 +26,23 @@ class Sitemap extends Model {
     }
 
     /**
-     * Create Sitemap
-     * @param string $loc
-     * @param string $lastmod
-     * @return Sitemap
+     * Create Sitemap Model
+     * @return Url
      */
-    public static function create($loc, $lastmod) {
+    public static function create($attributes = [])
+    {
         $model = new static();
-        $model->attributes = [
-            'loc' => $loc,
-            'lastmod' => $lastmod,
-        ];
-        return $model;
+        return $model->setAttributes($attributes);
     }
 
+    /**
+     * @param array $values
+     * @param bool|true $safeOnly
+     * @return $this
+     */
+    public function setAttributes($values, $safeOnly = true)
+    {
+        parent::setAttributes($values, $safeOnly);
+        return $this;
+    }
 }

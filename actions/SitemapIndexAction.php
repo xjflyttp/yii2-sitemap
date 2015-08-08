@@ -23,12 +23,6 @@ class SitemapIndexAction extends Action {
     public $route = ['site/sitemap'];
 
     /**
-     * remap type
-     * @var bool
-     */
-    private $isClosure;
-
-    /**
      * Custom Loc Index
      * @var Closure
      * @example
@@ -36,15 +30,14 @@ class SitemapIndexAction extends Action {
      */
     public $remap;
 
+    /**
+     * if $remap === null
+     * will use $indexClass to create model
+     * @var string
+     */
+    public $indexClass = 'xj\sitemap\models\Sitemap';
+
     public function init() {
-
-        if (is_callable($this->remap)) {
-            $this->isClosure = true;
-        } else {
-            $this->isClosure = false;
-            $this->remap = null;
-        }
-
         //init dataProvider
         $this->dataProvider->prepare();
 
@@ -63,7 +56,7 @@ class SitemapIndexAction extends Action {
         return $this->getFromDataProvider();
     }
 
-    private function setFormatters() {
+    protected function setFormatters() {
         $response = Yii::$app->response;
         $response->formatters[IndexResponseFormatter::FORMAT_INDEX] = new IndexResponseFormatter();
         $response->format = IndexResponseFormatter::FORMAT_INDEX;
@@ -71,24 +64,25 @@ class SitemapIndexAction extends Action {
 
     /**
      * getFromDataProvider
-     * @return []Sitemap
+     * @return Sitemap[]
      */
-    private function getFromDataProvider() {
+    protected function getFromDataProvider() {
         $pagination = $this->dataProvider->getPagination();
         $pageCount = $pagination->pageCount;
         $pageParam = $pagination->pageParam;
 
-        $indexModels = [];
+        $outModels = [];
+        $hasRemap = $this->remap !== null;
         for ($i = 0; $i < $pageCount; ++$i) {
             $currentPage = $i + 1;
-            if ($this->isClosure) {
-                $indexModels[] = call_user_func($this->remap, $currentPage, $pageParam);
+            if ($hasRemap) {
+                $outModels[] = call_user_func($this->remap, $currentPage, $pageParam);
             } else {
-                $indexModels[] = $this->getModel($currentPage, $this->route, $pageParam);
+                $outModels[] = $this->getModel($currentPage, $this->route, $pageParam);
             }
         }
 
-        return $indexModels;
+        return $outModels;
     }
 
     /**
@@ -98,11 +92,12 @@ class SitemapIndexAction extends Action {
      * @param int $pageParam
      * @return Sitemap
      */
-    private function getModel($currentPage, $route, $pageParam) {
+    protected function getModel($currentPage, $route, $pageParam) {
+        $indexClassName = $this->indexClass;
         $route[$pageParam] = $currentPage;
         $loc = Url::toRoute($route, true);
         $lastmod = date(DATE_W3C);
-        return Sitemap::create($loc, $lastmod);
+        return call_user_func([$indexClassName, 'create'], ['loc' => $loc, 'lastmod' => $lastmod]);
     }
 
 }
