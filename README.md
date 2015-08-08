@@ -84,13 +84,14 @@ public function actions()
                 ]]),
             'remap' => function ($model) {
                 /* @var $model User */
-                return BaiduUrl::create([
+                //return Array will auto using $urlClass::create()
+                return [
                     'loc' => \yii\helpers\Url::to(['user/view', 'username' => $model->username], true),
                     'lastmod' => date(DATE_W3C, $model->updated_at),
                     'changefreq' => Url::CHANGEFREQ_MONTHLY,
                     'priority' => '0.5',
                     'baiduType' => BaiduUrl::BAIDU_TYPE_MOBILE, // BaiduUrl::BAIDU_TYPE_ADAP | BaiduUrl::BAIDU_TYPE_HTMLADAP
-                ]);
+                ];
             },
         ],
 

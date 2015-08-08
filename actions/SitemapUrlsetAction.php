@@ -19,7 +19,8 @@ class SitemapUrlsetAction extends Action
     public $dataProvider;
 
     /**
-     * Remap Data to Url
+     * return (array) OR ('xj\sitemap\models\Url' | 'xj\sitemap\models\BaiduUrl')
+     * array will using $urlClass::create() instance
      * @var Closure
      */
     public $remap;
@@ -98,14 +99,17 @@ class SitemapUrlsetAction extends Action
         $urlClassName = $this->urlClass;
         $models = $this->dataProvider->getModels();
         $outModels = [];
+        $hasRemap = $this->remap !== null;
         foreach ($models as $model) {
-            if ($this->remap === null) {
-                $urlModel = new $urlClassName();
-                $outModels[] = $urlModel->setAttribute();
+            if ($hasRemap) {
+                $remapResult = call_user_func($this->remap, $model);
+                if (is_array($remapResult)) {
+                    $outModels[] = call_user_func([$urlClassName, 'create'], $remapResult);
+                } else {
+                    $outModels[] = $remapResult;
+                }
             } else {
-                //function($model)
-                //return Url
-                $outModels[] = call_user_func($this->remap, $model);
+                $outModels[] = $model;
             }
         }
         return $outModels;
