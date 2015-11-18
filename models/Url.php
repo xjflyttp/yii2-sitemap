@@ -2,6 +2,7 @@
 
 namespace xj\sitemap\models;
 
+use DOMDocument;
 use DOMElement;
 use DOMText;
 use yii\base\Model;
@@ -37,6 +38,16 @@ class Url extends Model
      */
     public $priority;
 
+    /**
+     * @var Image[]
+     */
+    public $images = [];
+
+    /**
+     * @var News[]
+     */
+    public $news = [];
+
     public function rules()
     {
         return [
@@ -64,6 +75,8 @@ class Url extends Model
     {
         return [
             'xmlns' => 'http://www.sitemaps.org/schemas/sitemap/0.9',
+            'xmlns:image' => 'http://www.google.com/schemas/sitemap-image/1.1',
+            'xmlns:news' => 'http://www.google.com/schemas/sitemap-news/0.9',
         ];
     }
 
@@ -95,13 +108,41 @@ class Url extends Model
     }
 
     /**
+     * @param array|Image $data
+     * @return $this
+     */
+    public function addImage($data)
+    {
+        if ($data instanceof Image) {
+            $this->images[] = $data;
+        } else {
+            $this->images[] = new Image($data);
+        }
+        return $this;
+    }
+
+    /**
+     * @param array|News $data
+     * @return $this
+     */
+    public function addNews($data)
+    {
+        if ($data instanceof News) {
+            $this->news[] = $data;
+        } else {
+            $this->news[] = new News($data);
+        }
+        return $this;
+    }
+
+    /**
      * Create SitemapUrl
+     * @param array $attributes
      * @return Url
      */
     public static function create($attributes = [])
     {
-        $model = new static();
-        return $model->setAttributes($attributes);
+        return new static($attributes);
     }
 
     /**
@@ -116,30 +157,36 @@ class Url extends Model
     }
 
     /**
-     * @param \DOMElement $urlElement <url> Element
+     * @param DOMElement $urlElement
+     * @param DOMDocument $doc
      */
-    public function buildUrlXml(&$urlElement)
+    public function buildUrlXml(&$urlElement, &$doc)
     {
-        $loc = new DOMElement('loc');
-        $urlElement->appendChild($loc);
-        $loc->appendChild(new DOMText($this->loc));
+        $urlElement->appendChild($doc->createElement('loc', $this->loc));
 
         if (!empty($this->lastmod)) {
-            $lastmod = new DOMElement('lastmod');
-            $urlElement->appendChild($lastmod);
-            $lastmod->appendChild(new DOMText($this->lastmod));
+            $urlElement->appendChild($doc->createElement('lastmod', $this->lastmod));
         }
 
         if (!empty($this->changefreq)) {
-            $changefreq = new DOMElement('changefreq');
-            $urlElement->appendChild($changefreq);
-            $changefreq->appendChild(new DOMText($this->getChangeFreqText()));
+            $urlElement->appendChild($doc->createElement('changefreq', $this->changefreq));
         }
 
         if (!empty($this->priority)) {
-            $priority = new DOMElement('priority');
-            $urlElement->appendChild($priority);
-            $priority->appendChild(new DOMText($this->priority));
+            $urlElement->appendChild($doc->createElement('priority', $this->priority));
+        }
+
+        if (count($this->images) > 0) {
+            foreach ($this->images as $mImage) {
+                $mImage->buildXml($urlElement, $doc);
+            }
+        }
+
+        if (count($this->news) > 0) {
+            foreach ($this->news as $mNews) {
+                $mNews->buildXml($urlElement, $doc);
+            }
         }
     }
+
 }

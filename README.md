@@ -51,13 +51,41 @@ public function actions()
                     'pageSize' => 1,
                 ]]),
             'remap' => function ($model) {
-                /* @var $model User */
-                return Url::create([
-                    'loc' => \yii\helpers\Url::to(['user/view', 'username' => $model->username], true),
-                    'lastmod' => date(DATE_W3C, $model->updated_at),
-                    'changefreq' => Url::CHANGEFREQ_MONTHLY,
-                    'priority' => '0.5',
-                ]);
+                    /* @var $model User */
+                    $url = Url::create([
+                        'loc' => \yii\helpers\Url::to(['user/view', 'username' => $model->username], true),
+                        'lastmod' => date(DATE_W3C, $model->updated_at),
+                        'changefreq' => Url::CHANGEFREQ_MONTHLY,
+                        'priority' => '0.5',
+                    ]);
+                    //BEGIN AddImage
+                    $url->addImage(new Image([
+                        'loc' => 'http://example.com/image1.jpg',
+                    ]));
+                    $url->addImage(new Image([
+                        'loc' => 'http://example.com/image2.jpg',
+                        'caption' => 'caption of the image.',
+                        'geo_location' => 'Limerick, Ireland',
+                        'title' => 'The title of the image.',
+                        'license' => 'A URL to the license of the image.',
+                    ]));
+                    //END AddImage
+                    // I'm a SplitLine
+                    //BEGIN AddNews
+                    $url->addNews(new News([
+                        'publication' => [
+                            'name' => 'The Example Times',
+                            'language' => 'en',
+                        ],
+                        'access' => 'Subscription',
+                        'genres' => 'PressRelease, Blog',
+                        'publication_date' => '2008-12-23',
+                        'title' => 'Companies A, B in Merger Talks',
+                        'keywords' => 'business, merger, acquisition, A, B',
+                        'stock_tickers' => 'NASDAQ:A, NASDAQ:B',
+                    ]));
+                    //END AddNews
+                    return $url;
             },
         ],
 

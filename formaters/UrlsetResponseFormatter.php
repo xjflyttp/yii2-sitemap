@@ -9,6 +9,7 @@ use xj\sitemap\models\Url;
 use yii\base\Arrayable;
 use yii\base\Component;
 use yii\helpers\ArrayHelper;
+use yii\web\Response;
 use yii\web\ResponseFormatterInterface;
 
 /**
@@ -52,7 +53,7 @@ class UrlsetResponseFormatter extends Component implements ResponseFormatterInte
 
     /**
      * xmlns
-     * @var string
+     * @var string[]
      */
     public $xmlns;
 
@@ -93,14 +94,14 @@ class UrlsetResponseFormatter extends Component implements ResponseFormatterInte
         }
         $response->getHeaders()->set('Content-Type', $this->contentType);
         $dom = new DOMDocument($this->version, $charset);
+        $dom->formatOutput = true;
         $urlsetElement = $dom->createElement($this->rootTag); //urlset
         $dom->appendChild($urlsetElement);
-
         foreach ($this->xmlns as $xmlnsAttributeName => $xmlnsAttributeValue) {
-            $urlsetElement->setAttribute($xmlnsAttributeName, $xmlnsAttributeValue);
+            $urlsetElement->setAttributeNS('http://www.w3.org/2000/xmlns/', $xmlnsAttributeName, $xmlnsAttributeValue);
         }
 
-        $this->buildXml($urlsetElement, $response->data);
+        $this->buildXml($urlsetElement, $response->data, $dom);
         $xmlData = $dom->saveXML();
         //output
         if ($this->gzip) {
@@ -112,19 +113,18 @@ class UrlsetResponseFormatter extends Component implements ResponseFormatterInte
     }
 
     /**
-     * @param DOMElement $element
-     * @param mixed $urls
+     * @param DOMElement $urlSetElement
+     * @param Url[] $urls
      */
-    protected function buildXml(&$urlSetElement, $urls)
+    protected function buildXml(&$urlSetElement, $urls, &$dom)
     {
-        /* @var $urls Url[] */
         foreach ($urls as $url) {
             if (false === $url->validate()) {
                 continue;//ignore error model
             }
             $urlElement = new DOMElement($this->itemTag);
             $urlSetElement->appendChild($urlElement);
-            $url->buildUrlXml($urlElement, $this->itemTag);
+            $url->buildUrlXml($urlElement, $dom);
         }
     }
 

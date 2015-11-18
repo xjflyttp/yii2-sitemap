@@ -4,6 +4,9 @@ namespace xj\sitemap\models;
 
 use yii\base\Model;
 
+/**
+ * @author xjflyttp <xjflyttp@gmail.com>
+ */
 class Sitemap extends Model
 {
     public $loc;

@@ -7,8 +7,7 @@ use DOMElement;
 use yii\helpers\ArrayHelper;
 
 /**
- * Class BaiduUrl
- * @package xj\sitemap\models
+ * @author xjflyttp <xjflyttp@gmail.com>
  */
 class BaiduUrl extends Url
 {
@@ -60,26 +59,26 @@ class BaiduUrl extends Url
     }
 
     /**
-     * @param \DOMElement $urlElement
+     * @param DOMElement $nodeElement
+     * @param DOMDocument $doc
      */
-    public function appendBaiduType(&$urlElement)
+    public function appendBaiduType(&$nodeElement, &$doc)
     {
         if (empty($this->baiduType)) {
             return;
         }
-        $baiduTypeElement = new DOMElement('mobile', '', 'mobile');
-        $baiduTypeNode = $urlElement->appendChild($baiduTypeElement);
-        $baiduTypeNode->prefix = 'mobile';
-        $baiduTypeNode->setAttribute('type', $this->getBaiduTypeText());
+        $baiduTypeElement = $doc->createElement('mobile:mobile');
+        $baiduTypeElement->setAttribute('type', $this->getBaiduTypeText());
+        $nodeElement->appendChild($baiduTypeElement);
     }
 
     /**
-     * @param \DOMElement $urlElement <url> Element
-     * @param string $itemTag NodeType <url>
+     * @param DOMElement $nodeElement
+     * @param DOMDocument $doc
      */
-    public function buildUrlXml(&$urlElement)
+    public function buildUrlXml(&$nodeElement, &$doc)
     {
-        parent::buildUrlXml($urlElement);
-        $this->appendBaiduType($urlElement);
+        parent::buildUrlXml($nodeElement, $doc);
+        $this->appendBaiduType($nodeElement, $doc);
     }
 }
