@@ -24,6 +24,8 @@ use yii\data\ActiveDataProvider;
 use yii\data\ArrayDataProvider;
 use xj\sitemap\models\Url;
 use xj\sitemap\models\BaiduUrl;
+use xj\sitemap\models\Image;
+use xj\sitemap\models\News;
 use xj\sitemap\actions\SitemapUrlsetAction;
 use xj\sitemap\actions\SitemapIndexAction;
 
