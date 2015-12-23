@@ -162,7 +162,9 @@ class Url extends Model
      */
     public function buildUrlXml(&$urlElement, &$doc)
     {
-        $urlElement->appendChild($doc->createElement('loc', $this->loc));
+        $loc = $doc->createElement('loc');
+        $loc->appendChild($doc->createTextNode($this->loc));
+        $urlElement->appendChild($loc);
 
         if (!empty($this->lastmod)) {
             $urlElement->appendChild($doc->createElement('lastmod', $this->lastmod));
